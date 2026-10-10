@@ -28,6 +28,27 @@ npm test         # tests du moteur de calcul
 npm run build    # site statique dans dist/ (hébergeable sur GitHub Pages, Netlify…)
 ```
 
+### Docker
+
+```bash
+docker build -t manageasmat .
+docker run -d -p 8080:8080 manageasmat      # puis http://localhost:8080
+```
+
+L'image construit le site (tests compris), puis le sert avec nginx (utilisateur non root, port 8080).
+
+À chaque commit poussé, la GitHub Action [`.github/workflows/docker.yml`](.github/workflows/docker.yml) lance les
+tests, construit l'image (amd64 et arm64) et la publie sur GitHub Container Registry :
+
+```bash
+docker run -d -p 8080:8080 ghcr.io/ekozan/manageasmat:latest        # branche par défaut
+docker run -d -p 8080:8080 ghcr.io/ekozan/manageasmat:<branche>     # ou sha-<commit>
+```
+
+Tags publiés : `sha-<commit>`, nom de la branche, `latest` (branche par défaut) et `x.y.z` pour un tag `vx.y.z`.
+Pour une pull request, l'image est seulement construite, pas publiée. Les données restant dans le navigateur, le
+conteneur ne stocke rien.
+
 Le code de calcul est dans [`src/lib/paie.ts`](src/lib/paie.ts) et ses tests, qui reprennent les exemples
 ci-dessous, dans [`src/lib/paie.test.ts`](src/lib/paie.test.ts).
 
