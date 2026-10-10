@@ -6,8 +6,12 @@ mois **les valeurs à saisir sur Pajemploi**.
 1. **Enfants** : déclarer le ou les enfants accueillis.
 2. **Contrats** : année complète / incomplète, planning type de la semaine, taux horaire, repas et goûters,
    indemnité d'entretien, indemnités kilométriques, majorations, mode de paiement des congés payés.
-3. **Calendrier prévisionnel** : le planning est appliqué automatiquement (jours fériés compris) ; on y ajoute les
-   événements (absences, congés, semaines sans accueil, heures en plus, km, repas en plus ou en moins).
+3. **Calendrier prévisionnel** : le planning est appliqué automatiquement (jours fériés compris). On **clique sur
+   un jour** pour saisir sa journée : statut (absence, congés…), **heure d'arrivée et de départ**, km, repas. Le
+   bouton « ✓ Conforme au planning » valide une journée normale en un clic. Une journée saisie passe en **bleu avec
+   ✓**. La vue « Saisie jour par jour » affiche tout le mois en tableau, et les événements sur plusieurs jours
+   (vacances, semaines sans accueil) se saisissent avec « Événement sur plusieurs jours… ». Un **compteur de congés
+   payés** de l'assistante maternelle (acquis, pris, restants, en cours d'acquisition) est affiché sous le calendrier.
 4. **Pajemploi** : rubriques à recopier (avec bouton « Copier »), détail du calcul et récapitulatif annuel.
 
 Les données restent **dans le navigateur** (localStorage). L'onglet « Sauvegarde & aide » permet d'exporter et
@@ -130,9 +134,17 @@ la mensualisation.
 | Absence de l'assistante maternelle | déduite (art. 111) | non dus | maladie (indemnités journalières CPAM), congé sans solde… |
 | Congés payés | maintenu (complète) / payés à part (incomplète) | non dus | voir § 6 |
 | Période non programmée | maintenu (mensualisé) | non dus | année incomplète uniquement |
+| Heures réelles (arrivée / départ) | maintenu si moins que prévu ; au-delà, heures en plus | entretien sur les heures réelles | voir ci-dessous |
 | Heures en plus | + heures complémentaires ou majorées | dus si accueil | voir § 4 |
 | Jour férié travaillé | + majoration | dus | voir § 5 |
 | Frais | — | km, repas en plus/en moins | voir § 7 |
+
+**Heures réelles.** Le salaire étant mensualisé, un enfant arrivé plus tard ou reparti plus tôt que prévu à
+l'initiative des parents **ne donne lieu à aucune déduction** : seules les absences prévues par la convention
+(maladie de l'enfant justifiée, absence de l'assistante maternelle…) se déduisent. Les heures au-delà du planning
+deviennent des heures complémentaires, puis majorées au-delà de 45 h dans la semaine. L'indemnité d'entretien
+horaire suit les heures réellement faites. Saisir des heures réelles un jour férié le compte comme férié
+travaillé, donc majoré.
 
 **Maladie de l'enfant (article 105).** Les parents peuvent ne pas rémunérer l'absence de l'enfant malade si
 elle est justifiée par un certificat médical (à fournir rapidement, en pratique sous 48 h). Ces absences sont
@@ -144,7 +156,8 @@ plus de 5 jours déduits ou une absence de plus de 14 jours.
 
 ## 4. Heures complémentaires et majorées
 
-Les heures sont comptées **par semaine civile** (lundi → dimanche) :
+Les heures sont comptées **par semaine civile** (lundi → dimanche), sur le total de la semaine. Les heures
+majorées sont imputées sur les dernières heures en plus de la semaine :
 
 - **heures complémentaires** : au-delà de l'horaire du contrat **jusqu'à 45 h** dans la semaine. Payées au taux
   normal, sauf si le contrat prévoit une majoration (champ « majoration des heures complémentaires ») ;
@@ -183,6 +196,17 @@ Exemple : en mai 2026, 1er mai (vendredi) et Ascension (jeudi 14) travaillés, 9
 
 Exemples : 41 semaines → 41 ÷ 4 × 2,5 = 25,6 → **26 jours** ; 40 semaines → 25 jours ; année complète entière
 → 30 jours ; contrat démarré le 1er septembre → 39 semaines → 24,4 → 25 jours pour la première période.
+
+### Compteur
+
+Sous le calendrier, le compteur affiche à la date du jour (ou à la fin du mois consulté) :
+
+- les jours **acquis** sur la dernière période close (1er juin → 31 mai), à prendre du 1er juin suivant au 31 mai ;
+- les jours **pris** depuis le 1er juin et les jours **posés** sur toute la période (congés prévus compris) ;
+- les jours **restants** à poser. S'ils sont négatifs, les jours en trop sont un congé sans solde ;
+- les jours **en cours d'acquisition** sur la période actuelle, et l'estimation au 31 mai.
+
+Les jours sont des jours **ouvrables** (lundi → samedi, hors fériés) : une semaine de congés compte 6 jours.
 
 ### Montant de l'indemnité
 

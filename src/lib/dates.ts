@@ -113,3 +113,14 @@ export function ferie(s: ISODate): string | undefined {
   }
   return m.get(s);
 }
+
+/** Durée en heures entre deux horaires « HH:MM » (passage de minuit non géré). */
+export function dureeHeures(arrivee?: string, depart?: string): number | undefined {
+  if (!arrivee || !depart) return undefined;
+  const min = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + (m || 0);
+  };
+  const d = min(depart) - min(arrivee);
+  return d > 0 ? Math.round((d / 60) * 100) / 100 : undefined;
+}

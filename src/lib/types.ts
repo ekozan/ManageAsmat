@@ -81,6 +81,7 @@ export type TypeEvenement =
   | 'conges_payes'
   | 'non_programme'
   | 'heures_sup'
+  | 'heures_reelles'
   | 'ferie_travaille'
   | 'frais';
 
@@ -92,6 +93,9 @@ export interface Evenement {
   dateFin: ISODate;
   /** Absences : heures d'absence par jour (vide = journée entière). Heures sup : heures en plus par jour. */
   heures?: number;
+  /** Heures réelles : heure d'arrivée et de départ (« HH:MM »), facultatives. */
+  arrivee?: string;
+  depart?: string;
   /** Kilomètres parcourus par jour. */
   km?: number;
   /** Repas en plus (positif) ou en moins (négatif) par jour, par type de repas. */
@@ -113,6 +117,7 @@ export const LIBELLES_EVENEMENT: Record<TypeEvenement, string> = {
   conges_payes: "Congés payés de l'assistante maternelle",
   non_programme: 'Période non programmée au contrat (année incomplète)',
   heures_sup: 'Heures en plus',
+  heures_reelles: 'Heures réelles du jour (arrivée / départ)',
   ferie_travaille: 'Jour férié travaillé',
   frais: 'Frais (km, repas en plus/en moins)',
 };
@@ -124,6 +129,7 @@ export const LIBELLES_COURTS: Record<TypeEvenement, string> = {
   conges_payes: 'CP',
   non_programme: 'Non prog.',
   heures_sup: 'H. en plus',
+  heures_reelles: 'Réel',
   ferie_travaille: 'Férié trav.',
   frais: 'Frais',
 };

@@ -204,6 +204,7 @@ export function calculerJour(c: Contrat, evts: Evenement[], date: ISODate): Jour
   const absEnfant = has('absence_enfant_deduite');
   const absDed = absEnfant ?? has('absence_assmat');
   const absPay = has('absence_enfant_payee');
+  const reel = has('heures_reelles');
   const ouvrable = weekday(date) <= 5 && !nomFerie;
   j.effectifCP = !has('non_programme') && !has('absence_assmat');
 
@@ -213,7 +214,8 @@ export function calculerJour(c: Contrat, evts: Evenement[], date: ISODate): Jour
   } else if (has('non_programme')) {
     j.statut = 'non_programme';
   } else if (j.prevu > 0) {
-    const ferieChome = nomFerie && !has('ferie_travaille');
+    // Saisir des heures réelles un jour férié revient à le déclarer travaillé.
+    const ferieChome = nomFerie && !has('ferie_travaille') && !(reel && reel.heures && reel.heures > 0);
     if (ferieChome && !absDed) {
       j.statut = 'ferie';
     } else {
@@ -230,9 +232,21 @@ export function calculerJour(c: Contrat, evts: Evenement[], date: ISODate): Jour
         }
         if (j.heuresTravaillees <= EPS) j.statut = absDed ? 'absence_deduite' : 'absence_payee';
       }
-      if (nomFerie && has('ferie_travaille')) j.heuresFerieTravaille = j.heuresTravaillees;
     }
   }
+
+  // Heures réelles : en dessous du planning, le salaire mensualisé est maintenu (pas de déduction) ;
+  // au-delà, la différence devient des heures en plus. Un jour sans accueil prévu, tout est en plus.
+  if (reel && reel.heures !== undefined && reel.heures >= 0) {
+    if (j.statut === 'travail' && j.prevu > 0) {
+      const base = j.heuresTravaillees;
+      j.heuresTravaillees = Math.min(reel.heures, base);
+      j.heuresEnPlus += Math.max(0, reel.heures - base);
+    } else if (j.statut === 'repos' || j.statut === 'non_programme') {
+      j.heuresEnPlus += reel.heures;
+    }
+  }
+  if (nomFerie && j.statut === 'travail') j.heuresFerieTravaille = j.heuresTravaillees;
 
   for (const e of evs) {
     if (e.type === 'heures_sup' && e.heures && e.heures > 0) j.heuresEnPlus += e.heures;
@@ -271,13 +285,16 @@ function heuresMajoreesParJour(c: Contrat, evts: Evenement[], dates: ISODate[]):
   const res = new Map<ISODate, number>();
   const semaines = new Set(dates.map(mondayOf));
   for (const lundi of semaines) {
-    let cumul = 0;
-    for (const d of dateRange(lundi, addDays(lundi, 6))) {
-      const j = calculerJour(c, evts, d);
-      cumul += j.heuresTravaillees - j.heuresEnPlus;
-      const avant = cumul;
-      cumul += j.heuresEnPlus;
-      res.set(d, Math.max(0, cumul - Math.max(c.seuilMajoration, avant)));
+    // Heures au-delà du seuil sur la semaine (au-delà des heures du planning si celles-ci le dépassent déjà,
+    // puisqu'elles sont mensualisées) ; elles sont imputées sur les dernières heures en plus de la semaine.
+    const jours = dateRange(lundi, addDays(lundi, 6)).map((d) => calculerJour(c, evts, d));
+    const total = jours.reduce((s, j) => s + j.heuresTravaillees, 0);
+    const base = jours.reduce((s, j) => s + j.heuresTravaillees - j.heuresEnPlus, 0);
+    let reste = Math.max(0, total - Math.max(c.seuilMajoration, base));
+    for (const j of [...jours].reverse()) {
+      const m = Math.min(j.heuresEnPlus, reste);
+      res.set(j.date, m);
+      reste -= m;
     }
   }
   return res;
@@ -364,6 +381,35 @@ class Calcul {
     };
     this.droits.set(anneeFin, d);
     return d;
+  }
+
+  /** Jours de congés acquis sur la période close au 31 mai `anneeFin`, comptés jusqu'à `jusqua` (non arrondis). */
+  acquisitionADate(anneeFin: number, jusqua: ISODate): number {
+    const c = this.c;
+    const joursParSemaine = c.planning.filter((p) => p.actif && p.heures > 0).length;
+    if (joursParSemaine === 0) return 0;
+    let joursEffectifs = 0;
+    for (let k = 0; k < 12; k++) {
+      const m = (5 + k) % 12;
+      const a = m >= 5 ? anneeFin - 1 : anneeFin;
+      if (makeISO(a, m, 1) > jusqua) break;
+      joursEffectifs += this.base(a, m).jours.filter(
+        (j) => j.date <= jusqua && j.statut !== 'hors_contrat' && j.prevu > 0 && j.effectifCP,
+      ).length;
+    }
+    return Math.min(30, ((joursEffectifs / joursParSemaine) / 4) * 2.5);
+  }
+
+  /** Jours ouvrables de congés payés pris entre deux dates (incluses). */
+  joursPris(debut: ISODate, fin: ISODate): number {
+    let n = 0;
+    let [a, m] = [Number(debut.slice(0, 4)), Number(debut.slice(5, 7)) - 1];
+    while (makeISO(a, m, 1) <= fin) {
+      n += this.base(a, m).jours.filter((j) => j.cp && j.statut !== 'hors_contrat' && j.date >= debut && j.date <= fin).length;
+      m++;
+      if (m === 12) [a, m] = [a + 1, 0];
+    }
+    return n;
   }
 
   /** Congés payés versés à part pendant le mois (année incomplète, ou complément en année complète). */
@@ -588,4 +634,48 @@ export function absencesEnfantSurAnnee(
     precedent = d;
   }
   return { debut, fin, jours, plusLongueSerie };
+}
+
+export interface CompteurCP {
+  /** Congés acquis sur la dernière période close (à prendre du 1er juin au 31 mai suivant). */
+  acquis: { debut: ISODate; fin: ISODate; jours: number };
+  /** Période pendant laquelle ces congés se prennent. */
+  priseDebut: ISODate;
+  priseFin: ISODate;
+  /** Jours pris jusqu'à la date, et jours posés sur toute la période de prise (prévisionnel compris). */
+  prisADate: number;
+  posesTotal: number;
+  restants: number;
+  /** Période en cours d'acquisition (congés pris l'année suivante). */
+  enCours: { debut: ISODate; fin: ISODate; joursADate: number; joursFinPeriode: number };
+}
+
+/** Compteur des congés payés de l'assistante maternelle à une date donnée. */
+export function compteurCP(c: Contrat, evts: Evenement[], date: ISODate): CompteurCP {
+  const calc = new Calcul(c, evts);
+  const annee = Number(date.slice(0, 4));
+  const mois = Number(date.slice(5, 7)) - 1;
+  // Période close la plus récente : elle se termine le 31 mai de cette année si l'on est en juin ou après.
+  const anneeFin = mois >= 5 ? annee : annee - 1;
+  const d = calc.droitsCP(anneeFin);
+  const priseDebut = makeISO(anneeFin, 5, 1);
+  const priseFin = makeISO(anneeFin + 1, 4, 31);
+  const prisADate = calc.joursPris(priseDebut, date);
+  const posesTotal = calc.joursPris(priseDebut, priseFin);
+  const enCoursDebut = c.dateDebut > priseDebut ? c.dateDebut : priseDebut;
+  const enCoursFin = c.dateFin && c.dateFin < priseFin ? c.dateFin : priseFin;
+  return {
+    acquis: { debut: d.debut, fin: d.fin, jours: d.joursAcquis },
+    priseDebut,
+    priseFin,
+    prisADate,
+    posesTotal,
+    restants: d.joursAcquis - posesTotal,
+    enCours: {
+      debut: enCoursDebut,
+      fin: enCoursFin,
+      joursADate: calc.acquisitionADate(anneeFin + 1, date),
+      joursFinPeriode: Math.min(30, Math.ceil(calc.acquisitionADate(anneeFin + 1, priseFin) - 1e-9)),
+    },
+  };
 }

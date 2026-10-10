@@ -9,7 +9,9 @@
   --danger: #c23b3b;
   --travail: #e3f2e6;
   --ferie: #fff1d6;
-  --cp: #dcecff;
+  --cp: #d4f1ec;
+  --saisi: #d6e4ff;
+  --saisi-bord: #2f6fdb;
   --abs-ded: #fde0e0;
   --abs-pay: #f1e6ff;
   --non-prog: #eceff3;
@@ -31,7 +33,9 @@
     --danger: #ef6b6b;
     --travail: #1f3a27;
     --ferie: #4a3a17;
-    --cp: #1d3452;
+    --cp: #17423d;
+    --saisi: #1d3557;
+    --saisi-bord: #6f9cf5;
     --abs-ded: #4d2424;
     --abs-pay: #3a2a52;
     --non-prog: #2a2f38;
@@ -158,3 +162,31 @@ th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--bord
 }
 .alertes { list-style: none; padding: 10px 14px; margin: 12px 0; border-radius: 6px; background: var(--ferie); }
 .alertes li + li { margin-top: 6px; }
+.onglets-vue { display: flex; gap: 6px; margin: 0 0 10px; }
+.saisie-jours { font-size: 0.88rem; background: var(--surface); }
+.saisie-jours td, .saisie-jours th { padding: 4px 6px; }
+.saisie-jours input[type='time'] { width: 105px; }
+.saisie-jours .nombre input { width: 58px; }
+.saisie-jours tr.st-repos td, .saisie-jours tr.st-travail td { background: var(--surface); }
+.saisie-jours tr.st-repos { opacity: 0.75; }
+.saisie-jours tr.st-cp td { background: var(--cp); }
+.saisie-jours tr.st-ferie td { background: var(--ferie); }
+.saisie-jours tr.st-absence_deduite td { background: var(--abs-ded); }
+.saisie-jours tr.st-absence_payee td { background: var(--abs-pay); }
+.saisie-jours tr.st-non_programme td { background: var(--non-prog); }
+.nowrap { white-space: nowrap; }
+.plus { color: var(--primaire); font-style: normal; }
+.compteur { background: var(--surface); border: 1px solid var(--bord); border-radius: 10px; padding: 12px 16px; margin: 16px 0; }
+.compteur h3 { margin: 0 0 10px; }
+.compteur-grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.compteur-grille > div { display: flex; flex-direction: column; gap: 2px; }
+.compteur-grille strong { font-size: 1.3rem; }
+.negatif { color: var(--danger); }
+
+.cal-jour.saisi { box-shadow: inset 0 0 0 2px var(--saisi-bord); }
+.cal-jour.st-travail.saisi, .pastille.saisi { background: var(--saisi); }
+.cal-jour.ouvert { outline: 3px solid var(--primaire); outline-offset: 1px; }
+.coche { color: var(--saisi-bord); font-weight: 700; }
+.journee { border-color: var(--saisi-bord); }
+.saisie-jours tr.saisi td:first-child { box-shadow: inset 4px 0 0 var(--saisi-bord); }
+.saisie-jours tr.st-travail.saisi td { background: var(--saisi); }

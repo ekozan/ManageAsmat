@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { BarreSelection, useSelection } from '../components/Selection';
 import { Champ, Nombre, euros, heures } from '../components/Champs';
-import { JOURS_COURTS, formatDate, makeISO, weekday } from '../lib/dates';
+import CompteurConges from '../components/CompteurConges';
+import SaisieJours, { JourneeEditeur } from '../components/SaisieJours';
+import { JOURS_COURTS, dureeHeures, formatDate, makeISO, today, weekday } from '../lib/dates';
 import { absencesEnfantSurAnnee, calculerMois, type JourCalcule, type StatutJour } from '../lib/paie';
 import { nouvelId, useStore } from '../lib/store';
 import { LIBELLES_COURTS, LIBELLES_EVENEMENT, type Contrat, type Evenement, type TypeEvenement } from '../lib/types';
@@ -17,6 +19,13 @@ const LIBELLES_STATUT: Record<StatutJour, string> = {
   absence_payee: 'Absence payée',
 };
 
+/** Date du compteur : aujourd'hui si on regarde le mois en cours, sinon la fin du mois affiché. */
+function compteurDate(finMois: string, debutContrat: string): string {
+  const t = today();
+  const d = finMois.slice(0, 7) === t.slice(0, 7) ? t : finMois;
+  return d < debutContrat ? debutContrat : d;
+}
+
 const TYPES_AVEC_HEURES: TypeEvenement[] = ['absence_enfant_deduite', 'absence_enfant_payee', 'absence_assmat', 'heures_sup'];
 const TYPES_AVEC_FRAIS: TypeEvenement[] = ['frais', 'heures_sup'];
 
@@ -24,6 +33,8 @@ export default function Calendrier() {
   const { donnees, sauverEvenement, supprimerEvenement } = useStore();
   const s = useSelection();
   const [edition, setEdition] = useState<Evenement | null>(null);
+  const [vue, setVue] = useState<'calendrier' | 'jours'>('calendrier');
+  const [jourOuvert, setJourOuvert] = useState<string | null>(null);
   const c = s.contrat;
 
   const res = useMemo(
@@ -64,10 +75,22 @@ export default function Calendrier() {
       <h2>Calendrier prévisionnel</h2>
       <p className="intro">
         Le planning type du contrat est appliqué automatiquement (jours fériés compris). Cliquez sur un jour pour
-        ajouter un événement : absence, congés, heures en plus, kilomètres, repas…
+        ajouter un événement (absence, congés sur une période…), ou passez en « saisie jour par jour » pour entrer
+        les heures réelles, les absences, les km et les repas de chaque journée.
       </p>
       <BarreSelection s={s} />
+      <div className="onglets-vue">
+        <button className={vue === 'calendrier' ? 'primaire' : ''} onClick={() => setVue('calendrier')}>
+          Calendrier
+        </button>
+        <button className={vue === 'jours' ? 'primaire' : ''} onClick={() => setVue('jours')}>
+          Saisie jour par jour
+        </button>
+      </div>
 
+      {vue === 'jours' ? (
+        <SaisieJours c={c} jours={res.jours} />
+      ) : (
       <div className="calendrier">
         {JOURS_COURTS.map((j) => (
           <div key={j} className="cal-entete">
@@ -78,9 +101,21 @@ export default function Calendrier() {
           <div key={`v${i}`} className="cal-vide" />
         ))}
         {res.jours.map((j) => (
-          <Case key={j.date} j={j} onClick={() => setEdition(nouvelEvenement(j.date))} />
+          <Case
+            key={j.date}
+            j={j}
+            saisi={j.evenements.some(
+              (e) => e.dateDebut === j.date && e.dateFin === j.date && e.type !== 'heures_sup',
+            )}
+            actif={jourOuvert === j.date}
+            onClick={() => {
+              setEdition(null);
+              setJourOuvert(j.date);
+            }}
+          />
         ))}
       </div>
+      )}
       <Legende />
       {(absences.jours > 5 || absences.plusLongueSerie > 14) && (
         <ul className="alertes">
@@ -91,6 +126,18 @@ export default function Calendrier() {
             doit reprendre le paiement du salaire ou rompre le contrat. Vérifiez vos déductions.
           </li>
         </ul>
+      )}
+
+      {jourOuvert && vue === 'calendrier' && res.jours.find((j) => j.date === jourOuvert) && (
+        <JourneeEditeur
+          c={c}
+          j={res.jours.find((j) => j.date === jourOuvert)!}
+          onClose={() => setJourOuvert(null)}
+          onPeriode={() => {
+            setEdition(nouvelEvenement(jourOuvert));
+            setJourOuvert(null);
+          }}
+        />
       )}
 
       {edition && (
@@ -118,7 +165,8 @@ export default function Calendrier() {
                 <strong>{LIBELLES_EVENEMENT[e.type]}</strong>
                 <div className="discret">
                   {e.dateDebut === e.dateFin ? `le ${formatDate(e.dateDebut)}` : `du ${formatDate(e.dateDebut)} au ${formatDate(e.dateFin)}`}
-                  {e.heures ? ` · ${heures(e.heures)}/jour` : ''}
+                  {e.arrivee || e.depart ? ` · ${e.arrivee ?? '?'} → ${e.depart ?? '?'}` : ''}
+                  {e.heures ? ` · ${heures(e.heures)}${e.type === 'heures_reelles' ? '' : '/jour'}` : ''}
                   {e.km ? ` · ${e.km} km/jour` : ''}
                   {e.repas &&
                     Object.entries(e.repas)
@@ -145,16 +193,25 @@ export default function Calendrier() {
         {heures(res.heuresComplementaires + res.heuresMajoreesEnPlus)} en plus · salaire net{' '}
         <strong>{euros(res.salaireNetTotal)}</strong> → <a href="#pajemploi">voir la déclaration Pajemploi</a>
       </div>
+
+      <CompteurConges c={c} date={compteurDate(dernier, c.dateDebut)} />
     </section>
   );
 }
 
-function Case({ j, onClick }: { j: JourCalcule; onClick: () => void }) {
+function Case({ j, saisi, actif, onClick }: { j: JourCalcule; saisi: boolean; actif: boolean; onClick: () => void }) {
   const jour = Number(j.date.slice(8));
   const nbRepas = Object.values(j.repas).reduce((a, b) => a + b, 0);
   return (
-    <button className={`cal-jour st-${j.statut}`} onClick={onClick} title={j.ferie ?? ''}>
-      <span className="cal-num">{jour}</span>
+    <button
+      className={`cal-jour st-${j.statut}${saisi ? ' saisi' : ''}${actif ? ' ouvert' : ''}`}
+      onClick={onClick}
+      title={j.ferie ?? ''}
+    >
+      <span className="cal-num">
+        {jour}
+        {saisi && <span className="coche" aria-label="journée saisie"> ✓</span>}
+      </span>
       {j.ferie && <span className="cal-ferie">{j.ferie}</span>}
       {j.statut !== 'repos' && <span className="cal-statut">{LIBELLES_STATUT[j.statut]}</span>}
       {j.heuresTravaillees > 0 && (
@@ -182,7 +239,7 @@ function Case({ j, onClick }: { j: JourCalcule; onClick: () => void }) {
 
 function Legende() {
   const items: [StatutJour, string][] = [
-    ['travail', 'Accueil'],
+    ['travail', 'Accueil prévu'],
     ['ferie', 'Férié chômé (payé)'],
     ['cp', 'Congés payés'],
     ['absence_deduite', 'Absence déduite'],
@@ -197,6 +254,9 @@ function Legende() {
           <i className={`pastille st-${st}`} /> {l}
         </span>
       ))}
+      <span>
+        <i className="pastille st-travail saisi" /> Journée saisie ✓
+      </span>
     </div>
   );
 }
@@ -249,6 +309,27 @@ function FormulaireEvenement({
         <Champ label="Au (inclus)">
           <input type="date" required min={e.dateDebut} value={e.dateFin} onChange={(ev) => set({ dateFin: ev.target.value })} />
         </Champ>
+        {e.type === 'heures_reelles' && (
+          <>
+            <Champ label="Arrivée">
+              <input
+                type="time"
+                value={e.arrivee ?? ''}
+                onChange={(ev) => set({ arrivee: ev.target.value || undefined, heures: dureeHeures(ev.target.value, e.depart) ?? e.heures })}
+              />
+            </Champ>
+            <Champ label="Départ">
+              <input
+                type="time"
+                value={e.depart ?? ''}
+                onChange={(ev) => set({ depart: ev.target.value || undefined, heures: dureeHeures(e.arrivee, ev.target.value) ?? e.heures })}
+              />
+            </Champ>
+            <Champ label="Heures réelles par jour" aide="Calculées depuis l'arrivée et le départ, ou à saisir directement.">
+              <Nombre valeur={e.heures} min={0} onChange={(v) => set({ heures: v })} suffixe="h" />
+            </Champ>
+          </>
+        )}
         {TYPES_AVEC_HEURES.includes(e.type) && (
           <Champ
             label={estAbsence ? "Heures d'absence par jour" : 'Heures en plus par jour'}
@@ -302,6 +383,8 @@ function AideEvenement({ type, contrat }: { type: TypeEvenement; contrat: Contra
       "Semaines sans accueil prévues au contrat (année incomplète) : déjà prises en compte dans la mensualisation, pas de déduction.",
     heures_sup:
       'Heures en plus du planning : complémentaires (taux normal) jusqu’au seuil hebdomadaire, puis majorées. Possible aussi sur un jour non travaillé.',
+    heures_reelles:
+      "Heures réellement faites ce jour-là. En dessous du planning, le salaire mensualisé est maintenu (pas de déduction) mais l'indemnité d'entretien suit les heures réelles. Au-delà, la différence compte en heures complémentaires puis majorées.",
     ferie_travaille: `La journée est travaillée et majorée de ${contrat.majorationFeriePct} % (100 % le 1er mai). Doit être prévu au contrat ou accepté par écrit.`,
     frais: 'Kilomètres parcourus et repas en plus ou en moins par rapport au planning.',
   };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { easter, ferie } from './dates';
-import { absencesEnfantSurAnnee, alertesContrat, calculerMois, droitsCP, heuresMensualisees, salaireMensualiseBrut } from './paie';
+import { absencesEnfantSurAnnee, alertesContrat, calculerMois, compteurCP, droitsCP, heuresMensualisees, salaireMensualiseBrut } from './paie';
 import type { Contrat, Evenement, PlanningJour } from './types';
 
 const jour = (heures: number, repas: Record<string, number> = { dej: 1, gouter: 1 }): PlanningJour => ({
@@ -315,5 +315,64 @@ describe('année complète : congés payés', () => {
     const d = droitsCP(c, [], 2026);
     expect(d.joursAcquis).toBe(25); // 39 semaines / 4 × 2,5 = 24,4 → 25
     expect(calculerMois(c, [], 2026, 5).congesPayesBrut).toBe(0);
+  });
+});
+
+describe('heures réelles saisies jour par jour', () => {
+  it('moins que prévu : salaire maintenu, entretien sur les heures réelles', () => {
+    const c = contrat({ entretien: { mode: 'heure', montant: 0.5, minimumJour: 2.65 } });
+    const evts = [ev({ type: 'heures_reelles', dateDebut: '2026-09-07', dateFin: '2026-09-07', arrivee: '09:00', depart: '16:00', heures: 7 })];
+    const r = calculerMois(c, evts, 2026, 8);
+    expect(r.salaireBrutTotal).toBe(780);
+    expect(r.heuresDeduites).toBe(0);
+    expect(r.jours[6].heuresTravaillees).toBe(7);
+    expect(r.pajemploi.indemnitesEntretien).toBeCloseTo(16 * 4.5 + 3.5);
+  });
+
+  it('plus que prévu : heures complémentaires', () => {
+    const evts = [ev({ type: 'heures_reelles', dateDebut: '2026-09-07', dateFin: '2026-09-07', heures: 10.5 })];
+    const r = calculerMois(contrat(), evts, 2026, 8);
+    expect(r.heuresComplementaires).toBe(1.5);
+    expect(r.salaireBrutTotal).toBeCloseTo(787.5);
+  });
+
+  it('jour non prévu : tout en heures en plus, majorées au-delà de 45 h', () => {
+    const evts = [ev({ type: 'heures_reelles', dateDebut: '2026-09-09', dateFin: '2026-09-09', heures: 10 })];
+    const r = calculerMois(contrat(), evts, 2026, 8);
+    expect(r.heuresComplementaires).toBe(9);
+    expect(r.heuresMajoreesEnPlus).toBe(1);
+  });
+
+  it('férié avec heures réelles : compté travaillé et majoré', () => {
+    const evts = [ev({ type: 'heures_reelles', dateDebut: '2026-05-14', dateFin: '2026-05-14', heures: 9 })];
+    const r = calculerMois(contrat(), evts, 2026, 4);
+    expect(r.majorationFerieBrut).toBeCloseTo(4.5);
+  });
+});
+
+describe('compteur de congés payés', () => {
+  it('acquis, pris, restants et en cours', () => {
+    const c = contrat({ dateDebut: '2025-06-01' });
+    const evts = [
+      ev({ type: 'conges_payes', dateDebut: '2026-07-06', dateFin: '2026-07-25' }), // 17 jours ouvrables
+      ev({ type: 'conges_payes', dateDebut: '2026-12-21', dateFin: '2026-12-26' }), // 5 jours ouvrables
+    ];
+    const k = compteurCP(c, evts, '2026-10-10');
+    expect(k.acquis.jours).toBe(30);
+    expect(k.prisADate).toBe(17);
+    expect(k.posesTotal).toBe(22);
+    expect(k.restants).toBe(8);
+    expect(k.enCours.debut).toBe('2026-06-01');
+    expect(k.enCours.joursADate).toBeGreaterThan(10);
+    expect(k.enCours.joursADate).toBeLessThan(12);
+    expect(k.enCours.joursFinPeriode).toBe(30);
+  });
+
+  it('première année : rien d’acquis, acquisition en cours', () => {
+    const c = contrat({ dateDebut: '2026-09-01' });
+    const k = compteurCP(c, [], '2026-10-31');
+    expect(k.acquis.jours).toBe(0);
+    expect(k.enCours.debut).toBe('2026-09-01');
+    expect(k.enCours.joursADate).toBeCloseTo((61 / 7 / 4) * 2.5, 0);
   });
 });
