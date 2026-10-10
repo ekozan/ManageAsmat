@@ -36,7 +36,14 @@ export default function Pajemploi() {
   const p = r.pajemploi;
   const lignes: [string, string, string][] = [
     ['Nombre d’heures normales', String(p.heuresNormales), 'Heures mensualisées (− absences / prorata) + heures complémentaires + congés payés versés convertis en heures, arrondies à l’entier le plus proche.'],
-    ['Nombre de jours d’activité', String(p.joursActivite), 'Jours où l’enfant a été accueilli.'],
+    [
+      'Nombre de jours d’activité',
+      String(p.joursActivite),
+      `Forfait mensualisé : ${p.joursMensualises} j (jours d’accueil par semaine × ${c.type === 'complete' ? 52 : c.semainesProgrammees} semaines ÷ 12, arrondi)` +
+        (p.joursAbsenceDeduits ? ` − ${p.joursAbsenceDeduits} j d’absence déduite ou hors contrat` : '') +
+        (p.joursEnPlus ? ` + ${p.joursEnPlus} j d’accueil en plus` : '') +
+        ` · présence réelle : ${p.joursPresence} j`,
+    ],
     ['Nombre de jours de congés payés', String(p.joursCongesPayes), 'Jours ouvrables de congés payés pris dans le mois.'],
     ['Salaire net total', montant(p.salaireNet), 'Salaire net à verser (hors indemnités).'],
     ...(p.heuresMajorees > 0

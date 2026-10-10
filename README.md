@@ -57,6 +57,7 @@ ci-dessous, dans [`src/lib/paie.test.ts`](src/lib/paie.test.ts).
 | Paiement des CP (≤ 46 sem.) | juin, prise principale ou au fur et à mesure ; **jamais 10 % par mois** | art. 102 | ✅ conforme |
 | Indemnité d'entretien | ≥ 90 % du minimum garanti pour 9 h, ≥ 2,65 €/jour | CCN | ✅ conforme (montant à saisir) |
 | Pajemploi | heures arrondies à l'entier le plus proche, CP convertis en heures | guides Pajemploi / RPE | ✅ conforme aux guides |
+| Jours d'activité Pajemploi | forfait jours/semaine × semaines ÷ 12 arrondi au supérieur, − absences déduites + jours en plus | fiches CAF / RPE | ✅ conforme aux guides |
 
 ---
 
@@ -299,11 +300,15 @@ signature du contrat.
 | Rubrique | Calcul de l'application |
 |---|---|
 | Nombre d'heures normales | heures mensualisées × part du salaire due (après déductions) + heures complémentaires + congés payés versés à part convertis en heures (montant ÷ taux horaire), **arrondi à l'entier le plus proche** |
-| Nombre de jours d'activité | jours où l'enfant a été accueilli |
+| Nombre de jours d'activité | **forfait mensualisé** : jours d'accueil par semaine × semaines (52 ou programmées) ÷ 12, **arrondi à l'entier supérieur**, − jours entiers d'absence déduite (et jours hors contrat du mois d'entrée/sortie) + jours d'accueil en dehors du planning. Ex. : 4 j × 52 ÷ 12 = 17,3 → 18 j chaque mois ; 4 j × 41 ÷ 12 = 13,7 → 14 j |
 | Nombre de jours de congés payés | jours ouvrables (lundi → samedi, hors fériés) de congés pris dans le mois |
 | Salaire net total | salaire brut total × coefficient net/brut |
 | Heures majorées (nombre / montant net) | heures au-delà de 45 h par semaine, mensualisées et en plus |
 | Indemnités d'entretien / de repas / kilométriques | totaux du mois |
+
+Comme les heures, les jours d'activité sont **forfaitisés** pour un accueil mensualisé : on ne déclare pas les
+jours réellement faits (sauf en accueil occasionnel). Un mois de vacances sans accueil en année incomplète se
+déclare donc avec le forfait complet. Le nombre de jours de présence réelle reste affiché pour information.
 
 La déclaration se fait entre le 25 du mois et le 5 du mois suivant. L'onglet Pajemploi affiche aussi le
 **total à verser** (salaire net + indemnités) et le détail ligne par ligne.
@@ -346,5 +351,7 @@ texte faisant foi est celui publié sur Légifrance.
   [UNSA Pro-Assmat, nouvelle convention](https://www.unsaproassmat.org/IMG/pdf/pages_de_lettre_n16_version_27-08.pdf)
 - Minimum horaire au 1er juin 2026 : [devenirassmat.com](https://devenirassmat.com/actualites/assistantes-maternelles-augmentation-des-salaires-au-1er-juin-2026),
   [France Emploi Domicile](https://www.franceemploidomicile.fr/actualite/hausse-des-salaires-minimums-au-1er-juin-2026-ce-quil-faut-savoir/)
+- Jours d'activité mensualisés : [fiche CAF / réseau RPE](https://www.caf.fr/sites/default/files/medias/431/Partenaires/Petite%20enfance/Reseau%20RPE/avenant%20mai%202021.pdf),
+  [fiche RPE « comment calculer la rémunération »](https://www.lachapellesurerdre.fr/sites/default/files/comment_calculer_la_remuneration_ass_mat.pdf)
 - Déclaration Pajemploi : [guide Pajemploi 2026 (Salerya)](https://salerya.fr/statuts/assistante-maternelle/pajemploi/),
   [fiche RPE déclaration Pajemploi](https://www.lachapellesurerdre.fr/sites/default/files/declaration_pajemploi.pdf)

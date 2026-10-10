@@ -106,6 +106,12 @@ export interface DeclarationPajemploi {
   montantNetHeuresMajorees: number;
   salaireNet: number;
   joursActivite: number;
+  /** Détail des jours d'activité forfaitisés. */
+  joursMensualises: number;
+  joursAbsenceDeduits: number;
+  joursEnPlus: number;
+  /** Jours où l'enfant a réellement été accueilli (information). */
+  joursPresence: number;
   joursCongesPayes: number;
   indemnitesEntretien: number;
   indemnitesRepas: number;
@@ -547,6 +553,26 @@ function calculerBase(c: Contrat, evtsC: Evenement[], annee: number, mois: numbe
   };
 }
 
+/**
+ * Jours d'activité à déclarer pour un accueil mensualisé : forfait de jours (jours d'accueil par semaine
+ * × semaines ÷ 12, arrondi à l'entier supérieur), moins les jours d'absence déduits (y compris les jours
+ * hors contrat du mois d'entrée ou de sortie), plus les jours d'accueil hors planning.
+ */
+function joursActiviteForfait(c: Contrat, jours: JourCalcule[]) {
+  const parSemaine = c.planning.filter((p) => p.actif && p.heures > 0).length;
+  const joursMensualises = Math.ceil((parSemaine * semainesMensualisation(c)) / 12 - 1e-9);
+  // Seules les journées entièrement non travaillées et déduites sont retirées.
+  const joursAbsenceDeduits = jours.filter((j) => j.prevu > 0 && j.jourDeduit >= 1 - EPS).length;
+  const joursEnPlus = jours.filter((j) => j.prevu <= 0 && j.heuresTravaillees > EPS).length;
+  return {
+    joursActivite: Math.max(0, joursMensualises - joursAbsenceDeduits + joursEnPlus),
+    joursMensualises,
+    joursAbsenceDeduits,
+    joursEnPlus,
+    joursPresence: jours.filter((j) => j.heuresTravaillees > EPS).length,
+  };
+}
+
 /** Calcule la paie d'un mois pour un contrat et les éléments à saisir sur Pajemploi. */
 export function calculerMois(c: Contrat, evts: Evenement[], annee: number, mois: number): ResultatMois {
   const calc = new Calcul(c, evts);
@@ -569,7 +595,7 @@ export function calculerMois(c: Contrat, evts: Evenement[], annee: number, mois:
         heuresMajorees: Math.round(heuresMajorees),
         montantNetHeuresMajorees: arrondi2(montantMajoreesBrut * c.coefNet),
         salaireNet: salaireNetTotal,
-        joursActivite: b.jours.filter((j) => j.heuresTravaillees > EPS).length,
+        ...joursActiviteForfait(c, b.jours),
         joursCongesPayes: b.jours.filter((j) => j.cp).length,
         indemnitesEntretien: p.indemnitesEntretien,
         indemnitesRepas: p.indemnitesRepas,
@@ -581,6 +607,10 @@ export function calculerMois(c: Contrat, evts: Evenement[], annee: number, mois:
         montantNetHeuresMajorees: 0,
         salaireNet: 0,
         joursActivite: 0,
+        joursMensualises: 0,
+        joursAbsenceDeduits: 0,
+        joursEnPlus: 0,
+        joursPresence: 0,
         joursCongesPayes: 0,
         indemnitesEntretien: 0,
         indemnitesRepas: 0,

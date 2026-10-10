@@ -189,7 +189,7 @@ export default function Calendrier() {
       )}
 
       <div className="resume">
-        Ce mois : <strong>{res.pajemploi.joursActivite}</strong> jours d'accueil ·{' '}
+        Ce mois : <strong>{res.pajemploi.joursPresence}</strong> jours d'accueil réels ·{' '}
         <strong>{heures(res.heuresPrevuesMois)}</strong> prévues · {heures(res.heuresDeduites)} déduites ·{' '}
         {heures(res.heuresComplementaires + res.heuresMajoreesEnPlus)} en plus · salaire net{' '}
         <strong>{euros(res.salaireNetTotal)}</strong> → <a href="#pajemploi">voir la déclaration Pajemploi</a>

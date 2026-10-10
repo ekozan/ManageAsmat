@@ -81,7 +81,7 @@ describe('calcul du mois', () => {
   it('mois complet sans événement (septembre 2026)', () => {
     const r = calculerMois(contrat(), [], 2026, 8);
     // Septembre 2026 : 1er = mardi. Lun/Mar/Jeu/Ven : 17 jours, pas de férié.
-    expect(r.pajemploi.joursActivite).toBe(17);
+    expect(r.pajemploi.joursPresence).toBe(17);
     expect(r.heuresPrevuesMois).toBe(153);
     expect(r.salaireBrutTotal).toBe(780);
     expect(r.pajemploi.salaireNet).toBe(608.4);
@@ -95,7 +95,7 @@ describe('calcul du mois', () => {
     const r = calculerMois(contrat(), evts, 2026, 8);
     expect(r.heuresDeduites).toBe(18);
     expect(r.deductionBrut).toBeCloseTo((780 * 18) / 153);
-    expect(r.pajemploi.joursActivite).toBe(15);
+    expect(r.pajemploi.joursPresence).toBe(15);
     expect(r.pajemploi.heuresNormales).toBe(138); // 156 × (1 − 18/153) = 137,65 arrondi
     expect(r.pajemploi.indemnitesEntretien).toBe(60);
   });
@@ -104,7 +104,7 @@ describe('calcul du mois', () => {
     const evts = [ev({ type: 'absence_enfant_payee', dateDebut: '2026-09-07', dateFin: '2026-09-07' })];
     const r = calculerMois(contrat(), evts, 2026, 8);
     expect(r.salaireBrutTotal).toBe(780);
-    expect(r.pajemploi.joursActivite).toBe(16);
+    expect(r.pajemploi.joursPresence).toBe(16);
     expect(r.pajemploi.indemnitesRepas).toBe(64);
   });
 
@@ -112,7 +112,7 @@ describe('calcul du mois', () => {
     const evts = [ev({ type: 'absence_assmat', dateDebut: '2026-09-07', dateFin: '2026-09-07', heures: 3 })];
     const r = calculerMois(contrat(), evts, 2026, 8);
     expect(r.heuresDeduites).toBe(3);
-    expect(r.pajemploi.joursActivite).toBe(17);
+    expect(r.pajemploi.joursPresence).toBe(17);
   });
 
   it('jours fériés : ni déduits ni indemnisés (mai 2026)', () => {
@@ -120,7 +120,7 @@ describe('calcul du mois', () => {
     // Fériés en mai 2026 : ven 1, ven 8, jeu 14, lun 25 -> tous des jours prévus
     expect(r.jours.filter((j) => j.statut === 'ferie').length).toBe(4);
     expect(r.salaireBrutTotal).toBe(780);
-    expect(r.pajemploi.joursActivite).toBe(17 - 4);
+    expect(r.pajemploi.joursPresence).toBe(17 - 4);
   });
 
   it('prorata du mois d’entrée', () => {
@@ -129,7 +129,7 @@ describe('calcul du mois', () => {
     // Jours prévus avant le 14 : 1,3,4,7,8,10,11 = 7 jours × 9 h = 63 h
     expect(r.heuresDeduites).toBe(63);
     expect(r.salaireBrutTotal).toBeCloseTo(780 * (1 - 63 / 153), 2);
-    expect(r.pajemploi.joursActivite).toBe(10);
+    expect(r.pajemploi.joursPresence).toBe(10);
   });
 
   it('hors contrat : rien à déclarer', () => {
@@ -170,7 +170,7 @@ describe('calcul du mois', () => {
     const r = calculerMois(contrat(), evts, 2026, 8);
     expect(r.salaireBrutTotal).toBe(780);
     expect(r.pajemploi.joursCongesPayes).toBe(6); // lundi -> samedi (ouvrables)
-    expect(r.pajemploi.joursActivite).toBe(13);
+    expect(r.pajemploi.joursPresence).toBe(13);
   });
 
   it('férié travaillé : majoration (1er mai payé double)', () => {
@@ -181,7 +181,7 @@ describe('calcul du mois', () => {
     const r = calculerMois(contrat(), evts, 2026, 4);
     expect(r.majorationFerieBrut).toBeCloseTo(9 * 5 * 1 + 9 * 5 * 0.1);
     expect(r.salaireBrutTotal).toBe(829.5);
-    expect(r.pajemploi.joursActivite).toBe(15);
+    expect(r.pajemploi.joursPresence).toBe(15);
   });
 
   it('férié chômé avec absence injustifiée : déduit', () => {
@@ -229,7 +229,7 @@ describe('année incomplète', () => {
     const r = calculerMois(inc(), evts, 2026, 8);
     expect(r.joursPrevusMois).toBe(17);
     expect(r.deductionBrut).toBeCloseTo(600 / 17);
-    expect(r.pajemploi.joursActivite).toBe(12); // 17 − 4 (non programmés) − 1 (absence)
+    expect(r.pajemploi.joursPresence).toBe(12); // 17 − 4 (non programmés) − 1 (absence)
   });
 
   it('absence partielle : fraction de journée', () => {
@@ -242,7 +242,7 @@ describe('année incomplète', () => {
     const evts = [ev({ type: 'non_programme', dateDebut: '2026-08-01', dateFin: '2026-08-31' })];
     const r = calculerMois(inc(), evts, 2026, 7);
     expect(r.salaireBrutTotal).toBe(600);
-    expect(r.pajemploi.joursActivite).toBe(0);
+    expect(r.pajemploi.joursPresence).toBe(0);
     expect(r.pajemploi.indemnitesRepas).toBe(0);
   });
 
@@ -398,5 +398,35 @@ describe('forfait de semaines sans accueil (année incomplète)', () => {
   it('dépassement du forfait', () => {
     const evts = [ev({ type: 'non_programme', dateDebut: '2026-07-06', dateFin: '2026-08-23' })]; // 7 semaines
     expect(compteurNonAccueil(c, evts, '2026-09-01').restantJours).toBe(-4);
+  });
+});
+
+describe('jours d’activité Pajemploi forfaitisés', () => {
+  it('année complète : 4 j × 52 / 12 = 17,3 → 18 jours, quel que soit le mois', () => {
+    expect(calculerMois(contrat(), [], 2026, 8).pajemploi.joursActivite).toBe(18);
+    expect(calculerMois(contrat(), [], 2026, 4).pajemploi.joursActivite).toBe(18); // mai, 4 fériés
+  });
+
+  it('moins les jours d’absence déduits, plus les jours en plus', () => {
+    const evts = [
+      ev({ type: 'absence_enfant_deduite', dateDebut: '2026-09-07', dateFin: '2026-09-08' }),
+      ev({ type: 'absence_assmat', dateDebut: '2026-09-10', dateFin: '2026-09-10', heures: 3 }), // partielle : non retirée
+      ev({ type: 'heures_reelles', dateDebut: '2026-09-09', dateFin: '2026-09-09', heures: 5 }), // mercredi hors planning
+    ];
+    const p = calculerMois(contrat(), evts, 2026, 8).pajemploi;
+    expect(p.joursAbsenceDeduits).toBe(2);
+    expect(p.joursEnPlus).toBe(1);
+    expect(p.joursActivite).toBe(17);
+  });
+
+  it('année incomplète 41 semaines : 4 × 41 / 12 = 13,7 → 14 jours, même un mois sans accueil', () => {
+    const c = contrat({ type: 'incomplete', semainesProgrammees: 41, modeCP: 'juin' });
+    const evts = [ev({ type: 'non_programme', dateDebut: '2026-08-01', dateFin: '2026-08-31' })];
+    expect(calculerMois(c, evts, 2026, 7).pajemploi.joursActivite).toBe(14);
+  });
+
+  it('mois d’entrée : jours avant le début retirés', () => {
+    const p = calculerMois(contrat({ dateDebut: '2026-09-14' }), [], 2026, 8).pajemploi;
+    expect(p.joursActivite).toBe(18 - 7);
   });
 });
