@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { BarreSelection, useSelection } from '../components/Selection';
 import { Champ, Nombre, euros, heures } from '../components/Champs';
 import CompteurConges from '../components/CompteurConges';
+import CompteurNonAccueil from '../components/CompteurNonAccueil';
 import SaisieJours, { JourneeEditeur } from '../components/SaisieJours';
 import { JOURS_COURTS, dureeHeures, formatDate, makeISO, today, weekday } from '../lib/dates';
 import { absencesEnfantSurAnnee, calculerMois, type JourCalcule, type StatutJour } from '../lib/paie';
@@ -13,7 +14,7 @@ const LIBELLES_STATUT: Record<StatutJour, string> = {
   repos: '',
   travail: 'Accueil',
   ferie: 'Férié',
-  non_programme: 'Non programmé',
+  non_programme: 'Vacances enfant',
   cp: 'Congés payés',
   absence_deduite: 'Absence déduite',
   absence_payee: 'Absence payée',
@@ -194,6 +195,7 @@ export default function Calendrier() {
         <strong>{euros(res.salaireNetTotal)}</strong> → <a href="#pajemploi">voir la déclaration Pajemploi</a>
       </div>
 
+      <CompteurNonAccueil c={c} date={compteurDate(dernier, c.dateDebut)} />
       <CompteurConges c={c} date={compteurDate(dernier, c.dateDebut)} />
     </section>
   );
@@ -244,7 +246,7 @@ function Legende() {
     ['cp', 'Congés payés'],
     ['absence_deduite', 'Absence déduite'],
     ['absence_payee', 'Absence payée'],
-    ['non_programme', 'Non programmé'],
+    ['non_programme', 'Vacances enfant / jour perlé'],
     ['hors_contrat', 'Hors contrat'],
   ];
   return (
@@ -380,7 +382,9 @@ function AideEvenement({ type, contrat }: { type: TypeEvenement; contrat: Contra
         ? 'Année complète : les congés payés sont inclus dans la mensualisation (pas de déduction). Les jours ouvrables sont comptés pour Pajemploi.'
         : "Année incomplète : les congés sont pris pendant les semaines sans accueil ; l'indemnité (calculée au 31 mai) est versée selon le mode choisi dans le contrat.",
     non_programme:
-      "Semaines sans accueil prévues au contrat (année incomplète) : déjà prises en compte dans la mensualisation, pas de déduction.",
+      contrat.type === 'incomplete'
+        ? "Vacances de l'enfant ou jour perlé : jours sans accueil prévus par le forfait du contrat (année incomplète). Déjà pris en compte dans la mensualisation : pas de déduction. Le compteur sous le calendrier indique ce qui reste du forfait."
+        : "En année complète, il n'y a pas de forfait de semaines sans accueil : si l'enfant ne vient pas en dehors des congés de l'assistante maternelle, utilisez « Absence enfant payée » (le salaire reste dû).",
     heures_sup:
       'Heures en plus du planning : complémentaires (taux normal) jusqu’au seuil hebdomadaire, puis majorées. Possible aussi sur un jour non travaillé.',
     heures_reelles:

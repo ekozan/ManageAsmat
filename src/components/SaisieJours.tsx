@@ -11,7 +11,7 @@ export const STATUTS: { type: TypeEvenement | ''; libelle: string }[] = [
   { type: 'absence_enfant_payee', libelle: 'Abs. enfant payée' },
   { type: 'absence_assmat', libelle: 'Abs. assistante maternelle' },
   { type: 'conges_payes', libelle: 'Congés payés' },
-  { type: 'non_programme', libelle: 'Non programmé' },
+  { type: 'non_programme', libelle: 'Vacances enfant / jour perlé' },
   { type: 'ferie_travaille', libelle: 'Férié travaillé' },
 ];
 export const TYPES_STATUT_JOUR = STATUTS.map((s) => s.type).filter(Boolean) as TypeEvenement[];

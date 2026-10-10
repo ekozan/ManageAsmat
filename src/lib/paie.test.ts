@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { easter, ferie } from './dates';
-import { absencesEnfantSurAnnee, alertesContrat, calculerMois, compteurCP, droitsCP, heuresMensualisees, salaireMensualiseBrut } from './paie';
+import { absencesEnfantSurAnnee, alertesContrat, calculerMois, compteurCP, compteurNonAccueil, droitsCP, heuresMensualisees, salaireMensualiseBrut } from './paie';
 import type { Contrat, Evenement, PlanningJour } from './types';
 
 const jour = (heures: number, repas: Record<string, number> = { dej: 1, gouter: 1 }): PlanningJour => ({
@@ -374,5 +374,29 @@ describe('compteur de congés payés', () => {
     expect(k.acquis.jours).toBe(0);
     expect(k.enCours.debut).toBe('2026-09-01');
     expect(k.enCours.joursADate).toBeCloseTo((61 / 7 / 4) * 2.5, 0);
+  });
+});
+
+describe('forfait de semaines sans accueil (année incomplète)', () => {
+  const c = contrat({ type: 'incomplete', semainesProgrammees: 46, modeCP: 'juin', dateDebut: '2026-01-01' });
+
+  it('jours perlés et semaines de vacances décomptés du forfait', () => {
+    const evts = [
+      ev({ type: 'non_programme', dateDebut: '2026-03-06', dateFin: '2026-03-06' }), // jour perlé (vendredi)
+      ev({ type: 'non_programme', dateDebut: '2026-08-03', dateFin: '2026-08-16' }), // 2 semaines
+      ev({ type: 'conges_payes', dateDebut: '2026-08-17', dateFin: '2026-08-23' }), // 1 semaine CP
+    ];
+    const k = compteurNonAccueil(c, evts, '2026-05-01');
+    expect(k.forfaitSemaines).toBe(6);
+    expect(k.forfaitJours).toBe(24);
+    expect(k.prisJours).toBe(1);
+    expect(k.posesJours).toBe(1 + 8 + 4);
+    expect(k.dontCongesAssmatJours).toBe(4);
+    expect(k.restantJours).toBe(11);
+  });
+
+  it('dépassement du forfait', () => {
+    const evts = [ev({ type: 'non_programme', dateDebut: '2026-07-06', dateFin: '2026-08-23' })]; // 7 semaines
+    expect(compteurNonAccueil(c, evts, '2026-09-01').restantJours).toBe(-4);
   });
 });

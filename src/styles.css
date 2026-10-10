@@ -14,7 +14,7 @@
   --saisi-bord: #2f6fdb;
   --abs-ded: #fde0e0;
   --abs-pay: #f1e6ff;
-  --non-prog: #eceff3;
+  --non-prog: #fde8d4;
   --hors: #f3f3f3;
   color-scheme: light;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -38,7 +38,7 @@
     --saisi-bord: #6f9cf5;
     --abs-ded: #4d2424;
     --abs-pay: #3a2a52;
-    --non-prog: #2a2f38;
+    --non-prog: #4a3220;
     --hors: #1a1d23;
     color-scheme: dark;
   }
@@ -190,3 +190,7 @@ th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--bord
 .journee { border-color: var(--saisi-bord); }
 .saisie-jours tr.saisi td:first-child { box-shadow: inset 4px 0 0 var(--saisi-bord); }
 .saisie-jours tr.st-travail.saisi td { background: var(--saisi); }
+.jauge { display: flex; height: 10px; border-radius: 5px; background: var(--fond); border: 1px solid var(--bord); overflow: hidden; margin: 12px 0 6px; }
+.jauge-pris { background: var(--primaire); }
+.jauge-poses { background: var(--saisi); }
+.alerte-texte { color: var(--danger); font-weight: 500; }

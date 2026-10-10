@@ -12,6 +12,8 @@ mois **les valeurs à saisir sur Pajemploi**.
    ✓**. La vue « Saisie jour par jour » affiche tout le mois en tableau, et les événements sur plusieurs jours
    (vacances, semaines sans accueil) se saisissent avec « Événement sur plusieurs jours… ». Un **compteur de congés
    payés** de l'assistante maternelle (acquis, pris, restants, en cours d'acquisition) est affiché sous le calendrier.
+   En année incomplète, un second compteur suit le **forfait de semaines sans accueil** (vacances de l'enfant,
+   jours perlés) : forfait, pris, posés, restant, avec alerte en cas de dépassement.
 4. **Pajemploi** : rubriques à recopier (avec bouton « Copier »), détail du calcul et récapitulatif annuel.
 
 Les données restent **dans le navigateur** (localStorage). L'onglet « Sauvegarde & aide » permet d'exporter et
@@ -124,6 +126,20 @@ fin du contrat sont comptés comme non travaillés. On ne fait pas de prorata en
 
 Un mois entier sans accueil (par exemple août en année incomplète) est **payé normalement** : c'est le principe de
 la mensualisation.
+
+**Forfait de semaines sans accueil (année incomplète).** Un contrat de N semaines programmées laisse
+**52 − N semaines sans accueil** sur 12 mois. Elles comprennent les vacances de l'enfant, les jours perlés et
+les congés de l'assistante maternelle pris pendant ces périodes. Par exemple, 41 semaines laissent 11 semaines
+sans accueil. On les pose dans le calendrier avec « Vacances de l'enfant / jour perlé » (ou « Congés payés »
+pour ceux de l'assistante maternelle). Le compteur les décompte en **jours d'accueil du planning** : avec
+4 jours d'accueil par semaine, une semaine de vacances = 4 j, un jour perlé = 1 j, un forfait de 11 semaines =
+44 j. Il est calculé sur l'année de contrat (12 mois à partir de la date de début ou de sa date anniversaire)
+et distingue les jours **déjà pris** des jours **posés à venir**. Au-delà du forfait, les jours où l'enfant ne
+vient pas ne sont plus « non programmés » : ils doivent être payés (« Absence enfant payée ») ou le contrat
+révisé par avenant.
+
+En année complète, il n'y a pas de forfait : une absence de l'enfant hors des congés de l'assistante
+maternelle est payée (« Absence enfant payée »).
 
 ## 3. Les événements du calendrier
 

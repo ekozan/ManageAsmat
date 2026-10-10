@@ -679,3 +679,55 @@ export function compteurCP(c: Contrat, evts: Evenement[], date: ISODate): Compte
     },
   };
 }
+
+export interface CompteurNonAccueil {
+  debut: ISODate;
+  fin: ISODate;
+  joursParSemaine: number;
+  /** Semaines sans accueil autorisées sur 12 mois : 52 − semaines programmées. */
+  forfaitSemaines: number;
+  forfaitJours: number;
+  /** Jours d'accueil prévus au planning mais sans accueil (vacances, jours perlés, congés de l'assistante maternelle). */
+  prisJours: number;
+  posesJours: number;
+  dontCongesAssmatJours: number;
+  restantJours: number;
+}
+
+/**
+ * Forfait de semaines sans accueil d'un contrat en année incomplète, sur l'année de contrat
+ * (12 mois à partir de la date d'effet ou de sa date anniversaire) contenant `date`.
+ * Les jours sont des jours d'accueil du planning type : 1 semaine = nombre de jours d'accueil par semaine.
+ */
+export function compteurNonAccueil(c: Contrat, evts: Evenement[], date: ISODate): CompteurNonAccueil {
+  const [, ma, da] = c.dateDebut.split('-').map(Number);
+  let annee = Number(date.slice(0, 4));
+  let debut = makeISO(annee, ma - 1, da);
+  if (debut > date) debut = makeISO(--annee, ma - 1, da);
+  const fin = addDays(makeISO(annee + 1, ma - 1, da), -1);
+  const evtsC = evts.filter((e) => e.contratId === c.id && e.dateFin >= debut && e.dateDebut <= fin);
+  const joursParSemaine = c.planning.filter((p) => p.actif && p.heures > 0).length;
+  const forfaitSemaines = Math.max(0, 52 - semainesMensualisation(c));
+  let prisJours = 0;
+  let posesJours = 0;
+  let dontCongesAssmatJours = 0;
+  for (const d of dateRange(debut, fin)) {
+    const j = calculerJour(c, evtsC, d);
+    if (j.prevu <= 0 || (j.statut !== 'non_programme' && j.statut !== 'cp')) continue;
+    posesJours++;
+    if (d <= date) prisJours++;
+    if (j.statut === 'cp') dontCongesAssmatJours++;
+  }
+  const forfaitJours = forfaitSemaines * joursParSemaine;
+  return {
+    debut,
+    fin,
+    joursParSemaine,
+    forfaitSemaines,
+    forfaitJours,
+    prisJours,
+    posesJours,
+    dontCongesAssmatJours,
+    restantJours: forfaitJours - posesJours,
+  };
+}
