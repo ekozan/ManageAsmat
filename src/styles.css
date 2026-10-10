@@ -1,0 +1,160 @@
+:root {
+  --fond: #f6f7f9;
+  --surface: #ffffff;
+  --texte: #1f2430;
+  --discret: #687083;
+  --bord: #dde1e8;
+  --primaire: #2f6fdb;
+  --primaire-texte: #ffffff;
+  --danger: #c23b3b;
+  --travail: #e3f2e6;
+  --ferie: #fff1d6;
+  --cp: #dcecff;
+  --abs-ded: #fde0e0;
+  --abs-pay: #f1e6ff;
+  --non-prog: #eceff3;
+  --hors: #f3f3f3;
+  color-scheme: light;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fond: #15181e;
+    --surface: #1e222a;
+    --texte: #e6e8ec;
+    --discret: #9aa3b5;
+    --bord: #353b47;
+    --primaire: #5b8ff0;
+    --danger: #ef6b6b;
+    --travail: #1f3a27;
+    --ferie: #4a3a17;
+    --cp: #1d3452;
+    --abs-ded: #4d2424;
+    --abs-pay: #3a2a52;
+    --non-prog: #2a2f38;
+    --hors: #1a1d23;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--fond); color: var(--texte); }
+a { color: var(--primaire); }
+
+.entete { background: var(--surface); border-bottom: 1px solid var(--bord); padding: 16px 16px 0; }
+.entete h1 { margin: 0; font-size: 1.4rem; }
+.sous-titre { margin: 2px 0 10px; color: var(--discret); }
+nav { display: flex; gap: 4px; overflow-x: auto; }
+nav a { padding: 8px 12px; text-decoration: none; color: var(--discret); border-bottom: 3px solid transparent; white-space: nowrap; }
+nav a.actif { color: var(--texte); border-color: var(--primaire); font-weight: 600; }
+
+main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+h2 { margin-top: 8px; }
+.intro, .discret { color: var(--discret); }
+.discret { font-size: 0.88rem; }
+.vide { color: var(--discret); font-style: italic; }
+
+button {
+  font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--bord);
+  background: var(--surface); color: var(--texte); cursor: pointer;
+}
+button:hover { border-color: var(--primaire); }
+button.primaire { background: var(--primaire); color: var(--primaire-texte); border-color: var(--primaire); }
+button.danger { color: var(--danger); }
+input, select {
+  font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--bord);
+  background: var(--surface); color: var(--texte); max-width: 100%;
+}
+input[type='checkbox'] { width: 18px; height: 18px; }
+
+.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0; }
+.cartes { list-style: none; padding: 0; display: grid; gap: 8px; }
+.carte, .ev {
+  display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center;
+  background: var(--surface); border: 1px solid var(--bord); border-radius: 8px; padding: 10px 14px;
+}
+.carte .actions, .ev .actions { margin: 0; }
+
+.panneau { background: var(--surface); border: 1px solid var(--bord); border-radius: 10px; padding: 14px 16px; margin: 16px 0; }
+.panneau h3 { margin-top: 0; }
+fieldset { border: 1px solid var(--bord); border-radius: 8px; margin: 0 0 14px; padding: 10px 14px; }
+legend { font-weight: 600; padding: 0 6px; }
+.grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.champ { display: flex; flex-direction: column; gap: 4px; }
+.champ-label { font-weight: 500; font-size: 0.9rem; }
+.champ-aide { font-size: 0.8rem; color: var(--discret); }
+.nombre { display: inline-flex; align-items: center; gap: 4px; }
+.nombre input { width: 90px; }
+.suffixe { color: var(--discret); font-size: 0.85rem; }
+
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--bord); vertical-align: middle; }
+.table-scroll { overflow-x: auto; }
+.planning tr.inactif td { opacity: 0.5; }
+.planning .nombre input { width: 64px; }
+.repas { width: auto; margin-bottom: 8px; }
+.resume { background: var(--surface); border: 1px solid var(--bord); border-left: 4px solid var(--primaire); border-radius: 6px; padding: 10px 14px; margin: 12px 0; }
+.resume.total { font-size: 1.05rem; }
+
+.barre { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
+.nav-mois { display: flex; align-items: center; gap: 10px; }
+.nav-mois strong { min-width: 140px; text-align: center; }
+
+.calendrier { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-entete { text-align: center; font-weight: 600; color: var(--discret); padding: 4px 0; }
+.cal-jour {
+  min-height: 92px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  text-align: left; padding: 4px 6px; border-radius: 6px; font-size: 0.78rem; overflow: hidden;
+}
+.cal-num { font-weight: 700; font-size: 0.95rem; }
+.cal-ferie { color: #a26a00; font-size: 0.72rem; }
+.cal-statut { font-weight: 500; }
+.cal-h em { color: var(--primaire); font-style: normal; }
+.cal-ded { color: var(--danger); }
+.cal-badges { display: flex; flex-wrap: wrap; gap: 2px; margin-top: auto; }
+.badge { font-size: 0.68rem; padding: 0 4px; border-radius: 4px; background: var(--fond); border: 1px solid var(--bord); }
+
+.st-travail { background: var(--travail); }
+.st-ferie { background: var(--ferie); }
+.st-cp { background: var(--cp); }
+.st-absence_deduite { background: var(--abs-ded); }
+.st-absence_payee { background: var(--abs-pay); }
+.st-non_programme { background: var(--non-prog); }
+.st-hors_contrat { background: var(--hors); opacity: 0.55; }
+.legende { display: flex; flex-wrap: wrap; gap: 12px; margin: 10px 0; font-size: 0.85rem; color: var(--discret); }
+.pastille { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--bord); vertical-align: -1px; }
+
+.evenements { list-style: none; padding: 0; display: grid; gap: 6px; }
+.ev { border-left-width: 4px; }
+.ev-absence_enfant_deduite, .ev-absence_assmat { border-left-color: var(--danger); }
+.ev-absence_enfant_payee { border-left-color: #8a5cd6; }
+.ev-conges_payes { border-left-color: var(--primaire); }
+.ev-heures_sup { border-left-color: #2a9d55; }
+.ev-frais { border-left-color: #c48a00; }
+
+.aide { background: var(--fond); border-radius: 6px; padding: 8px 10px; color: var(--discret); font-size: 0.88rem; }
+
+.declaration td.valeur { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.declaration { background: var(--surface); border: 1px solid var(--bord); border-radius: 8px; }
+.copier { font-size: 0.8rem; padding: 3px 8px; }
+.detail-calcul { margin: 12px 0; }
+.detail-calcul summary { cursor: pointer; font-weight: 600; }
+.recap td, .recap th { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.recap tbody tr { cursor: pointer; }
+.recap tr.courant { background: var(--cp); }
+.recap tr.inactif { opacity: 0.45; }
+.recap tfoot td { font-weight: 700; }
+.avertissement { font-size: 0.85rem; color: var(--discret); border-top: 1px solid var(--bord); padding-top: 10px; margin-top: 20px; }
+.message { font-weight: 500; }
+.aide-liste li { margin-bottom: 6px; }
+
+@media (max-width: 640px) {
+  .cal-jour { min-height: 64px; font-size: 0.65rem; padding: 2px 3px; }
+  .cal-statut, .cal-ferie, .cal-badges { display: none; }
+  .nav-mois strong { min-width: 110px; }
+}
+.alertes { list-style: none; padding: 10px 14px; margin: 12px 0; border-radius: 6px; background: var(--ferie); }
+.alertes li + li { margin-top: 6px; }
