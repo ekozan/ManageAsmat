@@ -1,0 +1,13 @@
+apiVersion: v2
+name: manageasmat
+description: Paie d'une assistante maternelle et déclaration Pajemploi (site statique servi par nginx)
+type: application
+version: 0.1.0
+appVersion: "latest"
+home: https://github.com/ekozan/ManageAsmat
+sources:
+  - https://github.com/ekozan/ManageAsmat
+keywords:
+  - pajemploi
+  - assistante-maternelle
+  - paie

@@ -1,6 +1,6 @@
-name: Image Docker
+name: Image Docker et chart Helm
 
-# Construit et publie l'image sur GitHub Container Registry (ghcr.io) à chaque commit poussé.
+# Construit et publie l'image et le chart Helm sur GitHub Container Registry (ghcr.io) à chaque commit poussé.
 on:
   push:
     branches: ['**']
@@ -28,6 +28,12 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - uses: azure/setup-helm@v4
+      - name: Vérification du chart Helm
+        run: |
+          helm lint charts/manageasmat --strict
+          helm template test charts/manageasmat --set ingress.enabled=true --set autoscaling.enabled=true \
+            --set podDisruptionBudget.enabled=true --set serviceAccount.create=true > /dev/null
 
   image:
     needs: test
@@ -69,3 +75,32 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  chart:
+    needs: image
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: Version du chart
+        id: v
+        run: |
+          base=$(grep '^version:' charts/manageasmat/Chart.yaml | awk '{print $2}')
+          short=${GITHUB_SHA::7}
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+            echo "app=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            # Pré-version unique par commit ; le chart pointe sur l'image exacte de ce commit.
+            echo "version=${base}-g${short}" >> "$GITHUB_OUTPUT"
+            echo "app=sha-${short}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Publication sur ghcr.io (OCI)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+          helm package charts/manageasmat --version "${{ steps.v.outputs.version }}" --app-version "${{ steps.v.outputs.app }}"
+          helm push "manageasmat-${{ steps.v.outputs.version }}.tgz" "oci://ghcr.io/${{ steps.v.outputs.owner }}/charts"

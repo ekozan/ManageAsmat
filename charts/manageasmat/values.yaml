@@ -1,0 +1,79 @@
+# Nombre de réplicas (le site est statique et sans état : on peut en mettre plusieurs).
+replicaCount: 1
+
+image:
+  repository: ghcr.io/ekozan/manageasmat
+  # Par défaut : appVersion du chart.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# Secrets pour tirer une image privée sur ghcr.io, ex. [{ name: ghcr }]
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  name: ""
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+
+# L'image tourne en utilisateur non root (nginx-unprivileged, uid 101) sur le port 8080.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 101
+  runAsGroup: 101
+  fsGroup: 101
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+containerPort: 8080
+
+service:
+  type: ClusterIP
+  port: 80
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # cert-manager.io/cluster-issuer: letsencrypt
+  hosts:
+    - host: manageasmat.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: manageasmat-tls
+  #    hosts:
+  #      - manageasmat.example.com
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 16Mi
+  limits:
+    memory: 64Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

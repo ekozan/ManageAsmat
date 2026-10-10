@@ -49,6 +49,29 @@ Tags publiés : `sha-<commit>`, nom de la branche, `latest` (branche par défaut
 Pour une pull request, l'image est seulement construite, pas publiée. Les données restant dans le navigateur, le
 conteneur ne stocke rien.
 
+### Kubernetes (Helm)
+
+Le chart est dans [`charts/manageasmat`](charts/manageasmat) et publié à chaque commit sur ghcr.io (OCI) :
+
+```bash
+# Dernière version d'une branche : voir les versions dans GitHub → Packages → charts/manageasmat
+helm install manageasmat oci://ghcr.io/ekozan/charts/manageasmat --version 0.1.0-g<commit>
+
+# Depuis le dépôt, avec un Ingress :
+helm install manageasmat charts/manageasmat \
+  --set ingress.enabled=true --set ingress.className=nginx \
+  --set 'ingress.hosts[0].host=paie.mondomaine.fr' --set 'ingress.hosts[0].paths[0].path=/' \
+  --set 'ingress.hosts[0].paths[0].pathType=Prefix'
+```
+
+- Versions publiées : `0.1.0-g<commit>` pour chaque commit (pointe sur l'image `sha-<commit>`), et `x.y.z` pour
+  un tag `vx.y.z`.
+- Options principales de `values.yaml` : `replicaCount`, `image.tag`, `ingress.*`, `resources`, `autoscaling`,
+  `podDisruptionBudget`, `imagePullSecrets` (si l'image reste privée).
+- Pod sécurisé par défaut : utilisateur non root, système de fichiers en lecture seule, aucune capacité Linux.
+- Aucun volume persistant : les données restent dans le navigateur de chaque utilisateur.
+- `helm test manageasmat` vérifie que le service répond.
+
 Le code de calcul est dans [`src/lib/paie.ts`](src/lib/paie.ts) et ses tests, qui reprennent les exemples
 ci-dessous, dans [`src/lib/paie.test.ts`](src/lib/paie.test.ts).
 

@@ -1,0 +1,15 @@
+ManageAsmat est déployé.
+
+{{- if .Values.ingress.enabled }}
+Adresse :
+{{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}/
+{{- end }}
+{{- else }}
+Pour y accéder en local :
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "manageasmat.fullname" . }} 8080:{{ .Values.service.port }}
+puis ouvrez http://localhost:8080
+{{- end }}
+
+Les données restent dans le navigateur de chaque utilisateur : rien n'est stocké dans le cluster.
+Pensez à les exporter régulièrement (onglet « Sauvegarde & aide »).
