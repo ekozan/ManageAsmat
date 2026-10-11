@@ -49,6 +49,25 @@ Tags publiés : `sha-<commit>`, nom de la branche, `latest` (branche par défaut
 Pour une pull request, l'image est seulement construite, pas publiée. Les données restant dans le navigateur, le
 conteneur ne stocke rien.
 
+### Publier une version
+
+```bash
+git tag v1.2.3 && git push origin v1.2.3
+```
+
+Le workflow [`.github/workflows/release.yml`](.github/workflows/release.yml) se déclenche sur chaque tag de
+version (`v1.2.3` ou `1.2.3`, préversions `v1.2.3-rc.1` acceptées) :
+
+1. tests et vérification du chart ;
+2. image `ghcr.io/ekozan/manageasmat` publiée avec les tags `1.2.3`, `1.2`, `1` et `latest` (pas de `latest` pour
+   une préversion) ;
+3. chart empaqueté depuis le code du tag en version `1.2.3` (appVersion `1.2.3`, donc l'image `1.2.3`) et publié
+   sur `oci://ghcr.io/ekozan/charts/manageasmat` ;
+4. `Chart.yaml` mis à jour (`version` et `appVersion`) et commité sur la branche par défaut ;
+5. release GitHub créée avec les notes générées et le chart `.tgz` en pièce jointe.
+
+Si la branche par défaut est protégée, autorisez `github-actions[bot]` à y pousser, sinon l'étape 4 échoue.
+
 ### Kubernetes (Helm)
 
 Le chart est dans [`charts/manageasmat`](charts/manageasmat) et publié à chaque commit sur ghcr.io (OCI) :
@@ -65,7 +84,7 @@ helm install manageasmat charts/manageasmat \
 ```
 
 - Versions publiées : `0.1.0-g<commit>` pour chaque commit (pointe sur l'image `sha-<commit>`), et `x.y.z` pour
-  un tag `vx.y.z`.
+  chaque release (voir ci-dessous).
 - Options principales de `values.yaml` : `replicaCount`, `image.tag`, `ingress.*`, `resources`, `autoscaling`,
   `podDisruptionBudget`, `imagePullSecrets` (si l'image reste privée).
 - Pod sécurisé par défaut : utilisateur non root, système de fichiers en lecture seule, aucune capacité Linux.

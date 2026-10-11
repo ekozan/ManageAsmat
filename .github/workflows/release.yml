@@ -1,0 +1,132 @@
+name: Release
+
+# À chaque nouveau tag de version (v1.2.3 ou 1.2.3) :
+#   1. tests ;
+#   2. image Docker publiée avec les tags 1.2.3, 1.2, 1 et latest ;
+#   3. Chart.yaml mis à jour (version et appVersion = 1.2.3) et commité sur la branche par défaut ;
+#   4. chart publié sur ghcr.io (OCI) et release GitHub créée avec le chart en pièce jointe.
+on:
+  push:
+    tags: ['v[0-9]*', '[0-9]*']
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version
+        id: v
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Le tag « $GITHUB_REF_NAME » n'est pas une version semver (ex. v1.2.3)."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - uses: azure/setup-helm@v4
+      - run: helm lint charts/manageasmat --strict
+
+  image:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tags de l'image
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.test.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.test.outputs.version }}
+            type=semver,pattern={{major}},value=${{ needs.test.outputs.version }}
+            type=sha
+          flavor: |
+            latest=${{ !contains(needs.test.outputs.version, '-') }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  chart:
+    needs: [test, image]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.test.outputs.version }}
+    steps:
+      # Code du tag : c'est lui qui est empaqueté.
+      - uses: actions/checkout@v4
+      # Branche par défaut : on y commite la nouvelle version de Chart.yaml.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: default-branch
+      - uses: azure/setup-helm@v4
+
+      - name: Publication du chart sur ghcr.io (OCI)
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+          helm package charts/manageasmat --version "${VERSION}" --app-version "${VERSION}"
+          helm push "manageasmat-${VERSION}.tgz" "oci://ghcr.io/${owner}/charts"
+
+      - name: Mise à jour de Chart.yaml sur la branche par défaut
+        working-directory: default-branch
+        run: |
+          sed -i -E "s/^version:.*/version: ${VERSION}/; s/^appVersion:.*/appVersion: \"${VERSION}\"/" charts/manageasmat/Chart.yaml
+          if git diff --quiet; then
+            echo "Chart.yaml déjà à jour."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(chart): version ${VERSION} [skip ci]"
+          git push origin "HEAD:${{ github.event.repository.default_branch }}"
+
+      - name: Release GitHub
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          notes=$(cat <<NOTES
+          Image : \`ghcr.io/${owner}/manageasmat:${VERSION}\`
+
+          Chart Helm :
+          \`\`\`bash
+          helm install manageasmat oci://ghcr.io/${owner}/charts/manageasmat --version ${VERSION}
+          \`\`\`
+          NOTES
+          )
+          prerelease=""
+          [[ "$VERSION" == *-* ]] && prerelease="--prerelease"
+          gh release create "$GITHUB_REF_NAME" "manageasmat-${VERSION}.tgz" \
+            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes --notes "$notes" $prerelease \
+          || gh release upload "$GITHUB_REF_NAME" "manageasmat-${VERSION}.tgz" --repo "$GITHUB_REPOSITORY" --clobber

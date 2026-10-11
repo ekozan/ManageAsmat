@@ -1,10 +1,10 @@
 name: Image Docker et chart Helm
 
 # Construit et publie l'image et le chart Helm sur GitHub Container Registry (ghcr.io) à chaque commit poussé.
+# Les tags de version (v1.2.3) sont gérés par release.yml.
 on:
   push:
     branches: ['**']
-    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -62,7 +62,6 @@ jobs:
             type=sha
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Construction et publication
@@ -89,14 +88,9 @@ jobs:
         run: |
           base=$(grep '^version:' charts/manageasmat/Chart.yaml | awk '{print $2}')
           short=${GITHUB_SHA::7}
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-            echo "app=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-          else
-            # Pré-version unique par commit ; le chart pointe sur l'image exacte de ce commit.
-            echo "version=${base}-g${short}" >> "$GITHUB_OUTPUT"
-            echo "app=sha-${short}" >> "$GITHUB_OUTPUT"
-          fi
+          # Pré-version unique par commit ; le chart pointe sur l'image exacte de ce commit.
+          echo "version=${base}-g${short}" >> "$GITHUB_OUTPUT"
+          echo "app=sha-${short}" >> "$GITHUB_OUTPUT"
           echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
 
       - name: Publication sur ghcr.io (OCI)
