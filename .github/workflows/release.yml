@@ -5,9 +5,16 @@ name: Release
 #   2. image Docker publiée avec les tags 1.2.3, 1.2, 1 et latest ;
 #   3. Chart.yaml mis à jour (version et appVersion = 1.2.3) et commité sur la branche par défaut ;
 #   4. chart publié sur ghcr.io (OCI) et release GitHub créée avec le chart en pièce jointe.
+# Lancement manuel aussi possible (Actions → Release → Run workflow) : le tag v<version> est alors créé
+# sur le commit choisi.
 on:
   push:
     tags: ['v[0-9]*', '[0-9]*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version à publier (ex. 1.2.3)'
+        required: true
 
 permissions:
   contents: write
@@ -22,17 +29,27 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
       - name: Version
         id: v
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            version="${INPUT_VERSION#v}"
+            tag="v${version}"
+          else
+            version="${GITHUB_REF_NAME#v}"
+            tag="$GITHUB_REF_NAME"
+          fi
           if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::Le tag « $GITHUB_REF_NAME » n'est pas une version semver (ex. v1.2.3)."
+            echo "::error::« $version » n'est pas une version semver (ex. 1.2.3)."
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -81,6 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VERSION: ${{ needs.test.outputs.version }}
+      TAG: ${{ needs.test.outputs.tag }}
     steps:
       # Code du tag : c'est lui qui est empaqueté.
       - uses: actions/checkout@v4
@@ -127,6 +145,6 @@ jobs:
           )
           prerelease=""
           [[ "$VERSION" == *-* ]] && prerelease="--prerelease"
-          gh release create "$GITHUB_REF_NAME" "manageasmat-${VERSION}.tgz" \
-            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes --notes "$notes" $prerelease \
-          || gh release upload "$GITHUB_REF_NAME" "manageasmat-${VERSION}.tgz" --repo "$GITHUB_REPOSITORY" --clobber
+          gh release create "$TAG" "manageasmat-${VERSION}.tgz" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$TAG" --generate-notes --notes "$notes" $prerelease \
+          || gh release upload "$TAG" "manageasmat-${VERSION}.tgz" --repo "$GITHUB_REPOSITORY" --clobber

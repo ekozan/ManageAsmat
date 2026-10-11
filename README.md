@@ -66,6 +66,9 @@ version (`v1.2.3` ou `1.2.3`, préversions `v1.2.3-rc.1` acceptées) :
 4. `Chart.yaml` mis à jour (`version` et `appVersion`) et commité sur la branche par défaut ;
 5. release GitHub créée avec les notes générées et le chart `.tgz` en pièce jointe.
 
+Sans passer par git : GitHub → Actions → **Release** → **Run workflow**, saisir la version (ex. `1.2.3`) ; le tag
+`v1.2.3` est créé sur le commit choisi.
+
 Si la branche par défaut est protégée, autorisez `github-actions[bot]` à y pousser, sinon l'étape 4 échoue.
 
 ### Kubernetes (Helm)
